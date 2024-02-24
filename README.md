@@ -26,3 +26,7 @@ Clone the repository to your local machine:
     go run main.go -appid=374 -filepath="/path/to/your/csvfile.csv"
     .\assetmgmt.exe -appid 374 -filepath sample-small.csv
 
+## For CI/CD
+    .github\workflows\buildnPush.yml
+    Above workflow will build,run tests and create and push docker image to the docker hub
+
