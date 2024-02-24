@@ -2,58 +2,124 @@ package assetprocessor
 
 import (
 	"assetmgmt/pkg/model"
+	"encoding/csv"
 	"fmt"
+	"io"
+	"os"
 	"strings"
+	"sync"
 )
 
-// removeDuplicateComputers filters out duplicate computer entries.
-func RemoveDuplicateAssets(assets []model.Asset) []model.Asset {
-	seen := make(map[string]model.Asset)
-	for _, asset := range assets {
-		key := fmt.Sprintf("%s-%s", asset.ComputerID, asset.UserID)
-		if existingComp, exists := seen[key]; exists {
-			// If the existing entry is a desktop and the new one is a laptop, replace it.
-			if strings.ToLower(existingComp.ComputerType) != model.LAPTOP && strings.ToLower(asset.ComputerType) == model.LAPTOP {
-				seen[key] = asset
-			}
-		} else {
-			seen[key] = asset
-		}
-	}
+// Global map to track the minimum number of copies per user.
+var userCopies = make(map[string]int)
+var mu sync.Mutex // For safely updating userCopies
 
-	uniqueComputers := make([]model.Asset, 0, len(seen))
-	for _, comp := range seen {
-		uniqueComputers = append(uniqueComputers, comp)
-	}
+func processComputers(computers []model.Asset) {
+	fmt.Println("processing assets")
+    localCopies := make(map[string]map[string]bool) // UserID to a map of ComputerType (normalized) to bool
+    for _, computer := range computers {
+        if computer.ApplicationID != "374" {
+            continue
+        }
+        // Normalize ComputerType to lowercase
+        computerType := strings.ToLower(computer.ComputerType)
+        if _, exists := localCopies[computer.UserID]; !exists {
+            localCopies[computer.UserID] = make(map[string]bool)
+        }
+        // Mark the computer type as present for the user
+        localCopies[computer.UserID][computerType] = true
+    }
 
-	return uniqueComputers
+    mu.Lock()
+    for userID, types := range localCopies {
+        // If the user has at least one laptop, only one copy is required.
+        // Otherwise, increment the copies required for each desktop.
+        _, hasLaptop := types["laptop"]
+        if hasLaptop {
+            userCopies[userID] = max(userCopies[userID], 1)
+        } else if _, hasDesktop := types["desktop"]; hasDesktop {
+            // If no laptop but desktops, ensure at least one copy is accounted for, per desktop.
+            userCopies[userID] += 1
+        }
+    }
+    mu.Unlock()
 }
 
-// calculateMinimumCopies calculates the minimum number of application copies needed.
-func CalculateMinimumCopies(assets []model.Asset,assetid string) int {
-	userLaptopCount := make(map[string]int)
-	userTotalCount := make(map[string]int)
+// Helper function to find the maximum of two integers.
+func max(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
+}
 
-	for _, asset := range assets {
-		if asset.ApplicationID == assetid {
-			userTotalCount[asset.UserID]++
-			if strings.ToLower(asset.ComputerType) == model.LAPTOP {
-				userLaptopCount[asset.UserID]++
-			}
-		}
-	}
 
-	totalCopies := 0
-	for userID := range userTotalCount {
-		if userLaptopCount[userID] > 0 {
-			// At least one laptop allows for two installations per copy.
-			copies := (userTotalCount[userID] + 1) / 2 // Ceiling division for odd numbers.
-			totalCopies += copies
-		} else {
-			// No laptops mean each desktop requires a separate copy.
-			totalCopies += userTotalCount[userID]
-		}
-	}
+func readAndProcessCSV(fileName string) error {
+	fmt.Println("read and process CSV")
+    file, err := os.Open(fileName)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
 
-	return totalCopies
+    csvReader := csv.NewReader(file)
+    var wg sync.WaitGroup
+
+    for {
+        records, err := csvReader.Read()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            return err
+        }
+
+        // Process in batches of 1000
+        var batch []model.Asset
+        for i := 0; i < 1000; i++ {
+            if len(records) == 0 { // If no more records, break
+                break
+            }
+            if len(records) < 4 { // Skip if record is incomplete
+                continue
+            }
+            batch = append(batch, model.Asset{
+                UserID:        records[1],
+                ApplicationID: records[2],
+                ComputerType:  records[3],
+            })
+            records, err = csvReader.Read()
+            if err == io.EOF {
+                break
+            }
+            if err != nil {
+                return err
+            }
+        }
+
+        wg.Add(1)
+        go func(batch []model.Asset) {
+            defer wg.Done()
+            processComputers(batch)
+        }(batch)
+    }
+
+    wg.Wait()
+    return nil
+}
+
+func ProcessAssets(){
+	err := readAndProcessCSV("sample-small.csv")
+    if err != nil {
+        fmt.Println("Error:", err)
+        return
+    }
+
+    totalCopies := 0
+	fmt.Println("total copies")
+    for _, copies := range userCopies {
+        totalCopies += copies
+    }
+
+    fmt.Printf("Total application copies required: %d\n", totalCopies)
 }
