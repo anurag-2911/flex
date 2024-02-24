@@ -3,20 +3,32 @@ package commandline
 import (
 	"flag"
 	"fmt"
+	"os"
 )
 
-// This function displays and reads the commandline args
-func ReadCommandLine() string {
-	var applicationID string
-	// applicationid is taken from command line or 374 is used as per the requirement doc.
-	flag.StringVar(&applicationID, "appid", "374", "The application ID to calculate the minimum number of copies needed.")
+// Gets the applicationID and filepath of the csv file
+// applicationID if not given by the user is 374 
+// filepath is a mandatory parameter
+func GetCommandLineArguments() (string, string) {
+    var applicationID string
+    var filePath string
+    flag.StringVar(&applicationID, "appid", "374", "The application ID to calculate the minimum number of copies needed.")
+    flag.StringVar(&filePath, "filepath", "", "Provide the path of the csv file")
 
-	//help message
-	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", flag.CommandLine.Name())
-		flag.PrintDefaults()
-	}
-	//parse the flags
-	flag.Parse()
-	return applicationID
+    flag.Usage = func() {
+        fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", flag.CommandLine.Name())
+        flag.PrintDefaults()
+    }
+
+    flag.Parse()
+
+    // Check if filePath is provided; if not, print usage and exit the program.
+    if filePath == "" {
+        fmt.Println("Error: The path to the csv file is required.")
+        flag.Usage()
+        os.Exit(1) // Exit the program indicating an error.
+    }
+
+    return applicationID, filePath
 }
+

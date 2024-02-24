@@ -14,11 +14,11 @@ import (
 var userCopies = make(map[string]int)
 var mu sync.Mutex // For safely updating userCopies
 
-func processComputers(computers []model.Asset) {
+func processComputers(computers []model.Asset,appid string) {
 	fmt.Println("processing assets")
     localCopies := make(map[string]map[string]bool) // UserID to a map of ComputerType (normalized) to bool
     for _, computer := range computers {
-        if computer.ApplicationID != "374" {
+        if computer.ApplicationID != appid {
             continue
         }
         // Normalize ComputerType to lowercase
@@ -34,10 +34,10 @@ func processComputers(computers []model.Asset) {
     for userID, types := range localCopies {
         // If the user has at least one laptop, only one copy is required.
         // Otherwise, increment the copies required for each desktop.
-        _, hasLaptop := types["laptop"]
+        _, hasLaptop := types[model.LAPTOP]
         if hasLaptop {
             userCopies[userID] = max(userCopies[userID], 1)
-        } else if _, hasDesktop := types["desktop"]; hasDesktop {
+        } else if _, hasDesktop := types[model.DESKTOP]; hasDesktop {
             // If no laptop but desktops, ensure at least one copy is accounted for, per desktop.
             userCopies[userID] += 1
         }
@@ -54,9 +54,9 @@ func max(a, b int) int {
 }
 
 
-func readAndProcessCSV(fileName string) error {
+func readAndProcessCSV(appid string,filepath string) error {
 	fmt.Println("read and process CSV")
-    file, err := os.Open(fileName)
+    file, err := os.Open(filepath)
     if err != nil {
         return err
     }
@@ -68,9 +68,11 @@ func readAndProcessCSV(fileName string) error {
     for {
         records, err := csvReader.Read()
         if err == io.EOF {
+			fmt.Println("reached EOF")
             break
         }
         if err != nil {
+			fmt.Println("error in reading file ",err)
             return err
         }
 
@@ -100,7 +102,7 @@ func readAndProcessCSV(fileName string) error {
         wg.Add(1)
         go func(batch []model.Asset) {
             defer wg.Done()
-            processComputers(batch)
+            processComputers(batch,appid)
         }(batch)
     }
 
@@ -108,8 +110,8 @@ func readAndProcessCSV(fileName string) error {
     return nil
 }
 
-func ProcessAssets(){
-	err := readAndProcessCSV("sample-small.csv")
+func ProcessAssets(appID string,filePath string){
+	err := readAndProcessCSV(appID,filePath)
     if err != nil {
         fmt.Println("Error:", err)
         return
