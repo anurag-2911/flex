@@ -10,12 +10,20 @@ import (
 	"sync"
 )
 
+/*
+A struct that encapsulates the state and functionality for processing asset data,
+including counting user copies of software applications.
+*/
 type assetProcessor struct {
 	userCopies map[string]int
 	mu         sync.Mutex
 }
 
-// NormalizeData preprocesses the computer data for business logic processing.
+/*
+This method takes a slice of model.Asset representing computer assets,
+normalizes the ComputerType field to lowercase for consistency,
+and returns the normalized slice.
+*/
 func (ap *assetProcessor) NormalizeData(computers []model.Asset) []model.Asset {
 	var normalized []model.Asset
 	for _, comp := range computers {
@@ -25,7 +33,12 @@ func (ap *assetProcessor) NormalizeData(computers []model.Asset) []model.Asset {
 	return normalized
 }
 
-// BusinessLogic processes the normalized data to determine application copies.
+/*
+Processes a slice of normalized model.Asset, filtering by the given appid.
+It calculates the required number of application copies based on the business rules:
+each user needs only one copy if they have a laptop, otherwise one copy per desktop.
+It updates the userCopies map with the total counts.
+*/
 func (ap *assetProcessor) BusinessLogic(computers []model.Asset, appid string) {
 	localCopies := make(map[string]map[string]bool)
 	for _, computer := range computers {
@@ -50,11 +63,19 @@ func (ap *assetProcessor) BusinessLogic(computers []model.Asset, appid string) {
 	}
 }
 
+// Orchestrates the processing of computer assets for a specific application ID.
+// It first normalizes the data and then applies the business logic to determine the necessary
+// application copies
 func (ap *assetProcessor) processComputers(computers []model.Asset, appid string) {
 	normalizedComputers := ap.NormalizeData(computers)
 	ap.BusinessLogic(normalizedComputers, appid)
 }
 
+/*
+Reads asset data from a CSV file at filepath, processing the data in batches of size batchsize.
+Each batch is processed concurrently, utilizing goroutines to handle the normalization and business logic.
+Errors during file reading or processing are returned to the caller.
+*/
 func (ap *assetProcessor) readAndProcessCSV(appid string, filepath string, batchsize int) error {
 	fmt.Println("read and process CSV")
 	file, err := os.Open(filepath)
@@ -111,6 +132,9 @@ func (ap *assetProcessor) readAndProcessCSV(appid string, filepath string, batch
 	return nil
 }
 
+// The entry point for processing assets from a CSV file. It initializes an assetProcessor,
+// reads and processes the CSV file, and finally calculates and displays the total number of application
+// copies required.
 func ProcessAssets(appID string, filePath string, batchsize int) {
 	ap := &assetProcessor{userCopies: make(map[string]int)}
 	err := ap.readAndProcessCSV(appID, filePath, batchsize)
@@ -128,7 +152,9 @@ func ProcessAssets(appID string, filePath string, batchsize int) {
 	fmt.Printf("Total application copies required: %d\n", totalCopies)
 }
 
-// Helper function to find the maximum of two integers.
+// A helper function that returns the maximum of two integers.
+// Used to ensure the user copy count does not decrease if a user already has more copies
+// than a new calculation suggests.
 func max(a, b int) int {
 	if a > b {
 		return a
