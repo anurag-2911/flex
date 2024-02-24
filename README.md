@@ -18,11 +18,11 @@ the minimum number of application copies required based on asset types and user 
 ### Installation
 Clone the repository to your local machine:
 
-git clone https://github.com/yourusername/assetprocessor.git
-cd cmd\assetmgmt 
-  Build the app:
+## git clone https://github.com/yourusername/assetprocessor.git
+## cd cmd\assetmgmt 
+## Build the app:
     go build
-  Running the app
+## Running the app
     go run main.go -appid=374 -filepath="/path/to/your/csvfile.csv"
     .\assetmgmt.exe -appid 374 -filepath sample-small.csv
 
