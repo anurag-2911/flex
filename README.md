@@ -3,6 +3,9 @@
 ## Overview
 This Go project processes asset data from CSV files, applying specific business logic to calculate 
 the minimum number of application copies required based on asset types and user allocations.
+This application is a command line utility and running the application is explained in the 
+Running the app section below.
+
 
 ## Features
 - Read and process asset data from CSV files.
