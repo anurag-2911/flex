@@ -38,6 +38,37 @@ func TestBusinessLogic(t *testing.T) {
 	}
 }
 
+// TestNormalizeDataWithEmptyInput tests normalization with an empty slice.
+func TestNormalizeDataWithEmptyInput(t *testing.T) {
+	ap := assetProcessor{}
+	normalized := ap.NormalizeData([]model.Asset{})
+
+	if len(normalized) != 0 {
+		t.Errorf("Expected empty slice, got %d items", len(normalized))
+	}
+}
+
+// TestBusinessLogicMultipleUsers tests application copy calculation for multiple users.
+func TestBusinessLogicMultipleUsers(t *testing.T) {
+	ap := assetProcessor{userCopies: make(map[string]int)}
+	computers := []model.Asset{
+		{UserID: "1", ApplicationID: "374", ComputerType: "laptop"},
+		{UserID: "2", ApplicationID: "374", ComputerType: "desktop"},
+		{UserID: "2", ApplicationID: "374", ComputerType: "laptop"},
+		{UserID: "3", ApplicationID: "374", ComputerType: "desktop"},
+		{UserID: "3", ApplicationID: "374", ComputerType: "desktop"},
+	}
+	ap.BusinessLogic(computers, "374")
+
+	expectedCopies := map[string]int{"1": 1, "2": 1, "3": 2}
+	for userID, expected := range expectedCopies {
+		if ap.userCopies[userID] != expected {
+			t.Errorf("Expected %d copies for user %s, got %d", expected, userID, ap.userCopies[userID])
+		}
+	}
+}
+
+
 func BenchmarkNormalizeData(b *testing.B) {
 	ap := assetProcessor{}
 	computers := make([]model.Asset, 1000)

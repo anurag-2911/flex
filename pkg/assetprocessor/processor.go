@@ -40,28 +40,39 @@ each user needs only one copy if they have a laptop, otherwise one copy per desk
 It updates the userCopies map with the total counts.
 */
 func (ap *assetProcessor) BusinessLogic(computers []model.Asset, appid string) {
-	localCopies := make(map[string]map[string]bool)
-	for _, computer := range computers {
-		if computer.ApplicationID != appid {
-			continue
-		}
-		if _, exists := localCopies[computer.UserID]; !exists {
-			localCopies[computer.UserID] = make(map[string]bool)
-		}
-		localCopies[computer.UserID][computer.ComputerType] = true
-	}
+    localCopies := make(map[string]map[string]int)
+    for _, computer := range computers {
+        if computer.ApplicationID != appid {
+            continue
+        }
+        if _, exists := localCopies[computer.UserID]; !exists {
+            localCopies[computer.UserID] = make(map[string]int)
+        }
+        // Increment the count for either computer type
+        localCopies[computer.UserID][computer.ComputerType] += 1
+    }
 
-	ap.mu.Lock()
-	defer ap.mu.Unlock()
-	for userID, types := range localCopies {
-		_, hasLaptop := types[model.LAPTOP]
-		if hasLaptop {
-			ap.userCopies[userID] = max(ap.userCopies[userID], 1)
-		} else if _, hasDesktop := types[model.DESKTOP]; hasDesktop {
-			ap.userCopies[userID] += 1
-		}
-	}
+    ap.mu.Lock()
+    defer ap.mu.Unlock()
+    for userID, types := range localCopies {
+        _, hasLaptop := types[model.LAPTOP]
+        _, hasDesktop := types[model.DESKTOP]
+        if hasLaptop {
+            // If the user has at least one laptop, they need only one copy
+            ap.userCopies[userID] = max(ap.userCopies[userID], 1)
+        } else if hasDesktop {
+            // If the user has only desktops, they can have up to two copies
+            // This assumes the business rule allows for 2 copies if only desktops are present
+            desktopCount := types[model.DESKTOP]
+            if desktopCount > 1 { // Check if there are more than one desktop
+                ap.userCopies[userID] = max(ap.userCopies[userID], 2)
+            } else {
+                ap.userCopies[userID] = max(ap.userCopies[userID], desktopCount)
+            }
+        }
+    }
 }
+
 
 // Orchestrates the processing of computer assets for a specific application ID.
 // It first normalizes the data and then applies the business logic to determine the necessary
