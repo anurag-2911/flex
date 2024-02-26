@@ -18,6 +18,9 @@ func GetCommandLineArguments() (string, string) {
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", flag.CommandLine.Name())
+		fmt.Println("Required arguments:") // Emphasize required arguments
+		fmt.Println("  -filepath <path to csv>  The path of the csv file")
+		fmt.Println("\nOptions:")
 		flag.PrintDefaults()
 	}
 
@@ -29,6 +32,8 @@ func GetCommandLineArguments() (string, string) {
 		flag.Usage()
 		os.Exit(1) // Exit the program indicating an error.
 	}
-
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		log.Fatalf("Error: File not found at path %s", filePath)
+	}
 	return applicationID, filePath
 }
