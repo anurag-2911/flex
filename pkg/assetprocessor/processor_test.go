@@ -68,7 +68,6 @@ func TestBusinessLogicMultipleUsers(t *testing.T) {
 	}
 }
 
-
 func BenchmarkNormalizeData(b *testing.B) {
 	ap := assetProcessor{}
 	computers := make([]model.Asset, 1000)
@@ -80,6 +79,7 @@ func BenchmarkNormalizeData(b *testing.B) {
 		ap.NormalizeData(computers)
 	}
 }
+
 // Benchmark test for processing a large number of records.
 func BenchmarkProcessComputers(b *testing.B) {
 	ap := &assetProcessor{userCopies: make(map[string]int)}
@@ -92,14 +92,16 @@ func BenchmarkProcessComputers(b *testing.B) {
 		ap.processComputers(assets, "374")
 	}
 }
+
 // Generates a random Asset record.
 func generateRandomAsset() model.Asset {
 	return model.Asset{
-		UserID:        strconv.Itoa(rand.Intn(10000)), // Assuming UserID range
-		ApplicationID: "374",                           // Fixed for this example
+		UserID:        strconv.Itoa(rand.Intn(10000)),              // Assuming UserID range
+		ApplicationID: "374",                                       // Fixed for this example
 		ComputerType:  []string{"laptop", "desktop"}[rand.Intn(2)], // Randomly choose
 	}
 }
+
 // Generates a slice of Asset records.
 func generateRandomAssets(n int) []model.Asset {
 	var assets []model.Asset
@@ -108,4 +110,3 @@ func generateRandomAssets(n int) []model.Asset {
 	}
 	return assets
 }
-

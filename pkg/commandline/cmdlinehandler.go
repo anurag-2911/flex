@@ -3,6 +3,7 @@ package commandline
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -24,7 +25,7 @@ func GetCommandLineArguments() (string, string) {
 
 	// Check if filePath is provided; if not, print usage and exit the program.
 	if filePath == "" {
-		fmt.Println("Error: The path to the csv file is required.")
+		log.Println("Error: The path to the csv file is required.")
 		flag.Usage()
 		os.Exit(1) // Exit the program indicating an error.
 	}

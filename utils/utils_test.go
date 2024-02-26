@@ -1,6 +1,6 @@
 package utils
 
-import (	
+import (
 	"os"
 	"testing"
 )
@@ -72,6 +72,3 @@ func TestGetBatchSizeInvalidJSON(t *testing.T) {
 		t.Errorf("Expected default batch size (%d), got %d", defaultBatchSize, batchSize)
 	}
 }
-
-
-
